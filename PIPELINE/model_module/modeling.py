@@ -5,7 +5,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 class model_():
     def __init__(self):
         # Define the model hyperparameters
-        self.save_path = "/home/madfalcon/MLmodel"
+        self.save_path = "/home/madfalcon/madfalcon_lab/model"
         self.model = None
         self.params = {
             "solver": "lbfgs",
