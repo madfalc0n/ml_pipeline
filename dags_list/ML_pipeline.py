@@ -3,16 +3,16 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.utils.dates import days_ago
 from airflow.models.baseoperator import chain
+from airflow.operators.bash_operator import BashOperator
 
 ## Common module list
 import numpy as np
 import sys
-sys.path.append("/home/madfalcon/model_trainer")
+sys.path.append('/home/madfalcon/git/ml_pipeline/PIPELINE')
 
 ## Custom module list
-from data_load import dataset
-from modeling import model_
-save_path = "/home/madfalcon/data"
+from dataset_module.data_load_MNIST import c_dataset
+from model_module.modeling_DL import modeling_main
 
 default_args = {
     'start_date': days_ago(0),
@@ -25,9 +25,18 @@ dag = DAG(
     catchup=False,
 )
 
+bash_cmd = """
+        cd /home/madfalcon/git/ml_pipeline || exit 1
+        git pull origin main
+    """
+    
 def T_dataset_loading():
+    """
+        학습가능한 Dataset으로 변환 후 저장하는 Task
+    """
+    save_path = "/home/madfalcon/data/MNIST_trainable"
     print("Task 1")
-    dset = dataset()
+    dset = c_dataset()
     print("Dataset Loading Process")
     dset.load_dataset()
     dset.split_data()
@@ -36,24 +45,18 @@ def T_dataset_loading():
     return result
 
 def T_model_training(**context):
+    """
+        학습가능한 데이터 저장경로를 xcom을 통해 수신 후 모델학습코드 실행 Task
+    """
     print("Task 2")
     print("model training")
-    result = context['ti'].xcom_pull(task_ids='T_dataset_loading', key='return_value')
-    x_train = np.load(result['x_train'])
-    y_train = np.load(result['y_train'])
-    x_test = np.load(result['x_test'])
-    y_test = np.load(result['y_test'])
-    print("Train Set:", x_train.shape, y_train.shape)
-    print("Test Set:", x_test.shape, y_test.shape)
-    model = model_()
-    model.fit([x_train,y_train])
-    model.predict([x_test,y_test])
-    return model
+    save_path_dict = context['ti'].xcom_pull(task_ids='T_dataset_loading', key='return_value')
+    modeling_main(save_path_dict)
 
-def T_model_serving(**context):
-    print("Model Save Process")
-    model = context['ti'].xcom_pull(task_ids='T_model_training', key='return_value')
-    model.save_()
+T_code_update = BashOperator(
+        task_id='T_code_update',
+        bash_command=bash_cmd
+    )
 
 T_dataset_loading = PythonOperator(
     task_id='T_dataset_loading',
@@ -65,11 +68,6 @@ T_model_training = PythonOperator(
     python_callable=T_model_training,
     dag=dag
 )
-T_model_serving = PythonOperator(
-    task_id='T_model_serving',
-    python_callable=T_model_serving,
-    dag=dag
-)
 
 
-chain(T_dataset_loading, T_model_training, T_model_serving)
+chain(T_code_update, T_dataset_loading, T_model_training)
