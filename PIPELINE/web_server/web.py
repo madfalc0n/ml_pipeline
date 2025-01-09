@@ -5,18 +5,20 @@ import numpy as np
 import base64
 import io
 from PIL import Image
+from collections import Counter
 
 # Flask 앱 생성
 app = Flask(__name__)
 
 # MNIST 데이터 로드
 transform = transforms.Compose([transforms.ToTensor()])
-test_dataset = datasets.MNIST(root="./data", train=False, download=True, transform=transform)
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=10, shuffle=True)
+train_dataset = datasets.MNIST(root="./data", train=True, download=True, transform=transform)
+# test_dataset = datasets.MNIST(root="./data", train=False, download=True, transform=transform)
+test_loader = torch.utils.data.DataLoader(train_dataset, batch_size=10, shuffle=True)
 
 # 학습된 모델 로드
 def model_load():
-    model = torch.jit.load('./model_scripted.pt')
+    model = torch.jit.load('D:/02.작업물/02.LAB/03.2025/web/model_scripted.pt')
     model.eval()
     return model
 
@@ -31,7 +33,7 @@ html_template = """
     <script>
         setInterval(function() {
             window.location.reload();
-        }, 1000);
+        }, 2000);
     </script>
     <style>
         table {
@@ -49,7 +51,8 @@ html_template = """
     </style>
 </head>
 <body>
-    <h1>MNIST Data Viewer with Prediction</h1>
+    <h1>MNIST Data Viewer with Prediction, Total ACC: {{ total_acc }}%</h1>
+
     <table border="1">
         <tr>
         {% for item in data %}
@@ -57,6 +60,21 @@ html_template = """
                 <img src="data:image/png;base64,{{ item.image_data }}" alt="MNIST Image">
                 <p>True: {{ item.label }}</p>
                 <p>Pred: {{ item.prediction }}</p>
+            </td>
+            {% if loop.index % 5 == 0 %}
+        </tr><tr>
+            {% endif %}
+        {% endfor %}
+        </tr>
+    </table>
+    <table border="1">
+        <tr>
+        {% for item2 in aggregate %}
+            <td>
+                <p>Label: {{ item2.label }}</p>
+                <p>Total Detect: {{ item2.total }}</p>
+                <p>Total Correct: {{ item2.correct }}</p>
+                <p>Accuracy: {{ item2.Accuracy }}%</p>
             </td>
             {% if loop.index % 5 == 0 %}
         </tr><tr>
@@ -76,6 +94,10 @@ def image_to_base64(image, scale=10):
     pil_image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
+result = {}
+for i in range(10):
+    result[i] = [0,0] #total , correct
+
 @app.route('/')
 def index():
     # 랜덤으로 10개 이미지 선택
@@ -85,7 +107,7 @@ def index():
 
     # 모델 예측
     with torch.no_grad():
-        predictions = model(images)
+        predictions, _ = model(images)
         predicted_labels = predictions.argmax(dim=1).cpu().tolist()
 
     # 이미지와 결과를 저장
@@ -99,8 +121,27 @@ def index():
             'label': labels[i].item(),
             'prediction': predicted_labels[i]
         })
+        result[i][0] += 1
+        if labels[i].item() == predicted_labels[i]:
+            result[i][1] += 1
+    aggregate = []
+    for i in range(10):
+        aggregate.append({
+            'label': i,
+            'total': result[i][0],
+            'correct': result[i][1],
+            'Accuracy':  round(result[i][1] / result[i][0] * 100, 1)
+        })
 
-    return render_template_string(html_template, data=data)
+    detect = 0
+    correct = 0
+    total_acc = 0
+    for i in range(10):
+        detect += result[i][0]
+        correct += result[i][1]
+        total_acc = round(correct / detect * 100, 0)
+    print("total_acc:", total_acc)
+    return render_template_string(html_template, data=data, aggregate=aggregate, total_acc = total_acc)
 
 if __name__ == '__main__':
     app.run(debug=True)
