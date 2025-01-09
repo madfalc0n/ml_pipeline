@@ -9,7 +9,9 @@ class c_dataset:
         MNIST(npy) source: https://www.kaggle.com/datasets/sivasankaru/mnist-npy-file-dataset?resource=download
     """
     def __init__(self, data_path="/home/madfalcon/data/MNIST", 
-            save_path="/home/madfalcon/data/MNIST_trainable"):
+            save_path="/home/madfalcon/data/MNIST_trainable",
+            ignore_label = []):
+        self.ignore_label = ignore_label
         self.data_path = data_path
         self.save_path = save_path
         self.origin_data = {}
@@ -47,6 +49,13 @@ class c_dataset:
         self.data["valid"] = [valid_x, valid_y]
         self.data["test"] = [self.origin_data['test_x'], self.origin_data['test_y']]
         print(f"Data Split(Ratio:{ratio}) Complete")
+
+        print("ignore label list", self.ignore_label)
+        for label_ in self.ignore_label:
+            indice = np.where(self.data["train"][1] != label_)
+            self.data["train"][0] = self.data["train"][0][indice]
+            self.data["train"][1] = self.data["train"][1][indice]
+            print(np.unique(self.data["train"][1]), f"label {label_} is ignored")
 
     def get_data(self):
         return self.data
