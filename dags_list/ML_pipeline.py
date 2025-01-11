@@ -36,7 +36,9 @@ def T_dataset_loading():
     """
     save_path = "/home/madfalcon/data/MNIST_trainable"
     print("Task 1")
-    dset = c_dataset()
+    # iglabel=[1,2,3,4]
+    iglabel=[]
+    dset = c_dataset(ignore_label=iglabel)
     print("Dataset Loading Process")
     dset.load_dataset()
     dset.split_data()
@@ -51,7 +53,9 @@ def T_model_training(**context):
     print("Task 2")
     print("model training")
     save_path_dict = context['ti'].xcom_pull(task_ids='T_dataset_loading', key='return_value')
-    modeling_main(save_path_dict)
+    model_save_path = "/home/madfalcon/madfalcon_lab/model"
+    print("model save path:", model_save_path)
+    modeling_main(save_path_dict,save_path=model_save_path)
 
 T_code_update = BashOperator(
         task_id='T_code_update',

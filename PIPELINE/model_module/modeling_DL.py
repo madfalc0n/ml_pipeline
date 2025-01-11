@@ -7,6 +7,11 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 import numpy as np
 
+#mlflow
+import mlflow
+import mlflow.pytorch
+from mlflow.tracking import MlflowClient
+
 # 데이터셋 정의 (비정상 데이터: 8)
 class loadDataset(Dataset):
     def __init__(self, path_dict, ignore_label=[]):
@@ -81,40 +86,52 @@ def modeling_main(path_dict:dict, ignore_label:list=[], save_path:str="/home/mad
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=train_param["learning_rate"])
 
-    # 학습 루프
-    for epoch in range(10):  # 에포크 수
-        model.train()
-        running_loss = 0.0
-        for images, labels in train_loader:
-            images, labels = images.to(device), labels.to(device)
-            optimizer.zero_grad()
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.item()
-        
-        avg_loss = running_loss / len(train_loader)
-        print(f"Epoch {epoch+1}, Loss: {avg_loss}")
 
-    # 테스트 루프
-    model.eval()
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for images, labels in test_loader:
-            images, labels = images.to(device), labels.to(device)
-            labels=labels.view(-1)
-            outputs = model(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels.data).sum().item()
+    # MLflow 설정
+    experiment_name = "MLOPS Classification"
+    mlflow.set_experiment(experiment_name)
+    with mlflow.start_run():
+        # 하이퍼파라미터 로깅
+        for param_, value in train_param.items():
+                mlflow.log_param(param_, value)
 
-    accuracy = 100 * correct / total
-    print(f"Accuracy: {accuracy:.2f}%")
-    model_scripted = torch.jit.script(model) # Export to TorchScript
-    model_scripted.save(save_path+'/model_scripted.pt') # Save
-    print(f"save complete")
+        # 학습 루프
+        for epoch in range(10):  # 에포크 수
+            model.train()
+            running_loss = 0.0
+            for images, labels in train_loader:
+                images, labels = images.to(device), labels.to(device)
+                optimizer.zero_grad()
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+                loss.backward()
+                optimizer.step()
+                running_loss += loss.item()
+            
+            avg_loss = running_loss / len(train_loader)
+            mlflow.log_metric("Train_loss", avg_loss, step=epoch+1)
+            print(f"Epoch {epoch+1}, Loss: {avg_loss}")
+
+        # 테스트 루프
+        model.eval()
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for images, labels in test_loader:
+                images, labels = images.to(device), labels.to(device)
+                labels=labels.view(-1)
+                outputs = model(images)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels.data).sum().item()
+
+        accuracy = 100 * correct / total
+        mlflow.log_metric("Accuracy", accuracy)
+        print(f"Accuracy: {accuracy:.2f}%")
+        model_scripted = torch.jit.script(model) # Export to TorchScript
+        model_scripted.save(save_path+'/model_scripted.pt') # Save
+        mlflow.pytorch.log_model(model, "model")
+        print(f"save complete")
 
 if __name__ == "__main__":
     data_dict = {
