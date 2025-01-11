@@ -18,7 +18,7 @@ test_loader = torch.utils.data.DataLoader(train_dataset, batch_size=10, shuffle=
 
 # 학습된 모델 로드
 def model_load():
-    model = torch.jit.load('D:/02.작업물/02.LAB/03.2025/web/model_scripted.pt')
+    model = torch.jit.load('/home/madfalcon/madfalcon_lab/model/model_scripted.pt')
     model.eval()
     return model
 
@@ -107,7 +107,7 @@ def index():
 
     # 모델 예측
     with torch.no_grad():
-        predictions, _ = model(images)
+        predictions = model(images)
         predicted_labels = predictions.argmax(dim=1).cpu().tolist()
 
     # 이미지와 결과를 저장
@@ -144,4 +144,5 @@ def index():
     return render_template_string(html_template, data=data, aggregate=aggregate, total_acc = total_acc)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=1234)
+    

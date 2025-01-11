@@ -59,14 +59,14 @@ class CNN(nn.Module):
         x = self.fc2(x)
         return x
 
-def modeling_main(path_dict:dict, ignore_label:list=[]):
+def modeling_main(path_dict:dict, ignore_label:list=[], save_path:str="/home/madfalcon/madfalcon_lab/model/"):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_param = {
         "device":device,
         "learning_rate":0.01,
         "batch_size":64,
         "epochs":10,
-        "cost_function":"BCE"
+        "cost_function":"CE"
     }
     # 데이터 로더
     train_dataset = loadDataset(path_dict['train'], ignore_label=ignore_label)
@@ -113,7 +113,7 @@ def modeling_main(path_dict:dict, ignore_label:list=[]):
     accuracy = 100 * correct / total
     print(f"Accuracy: {accuracy:.2f}%")
     model_scripted = torch.jit.script(model) # Export to TorchScript
-    model_scripted.save('./model_scripted.pt') # Save
+    model_scripted.save(save_path+'/model_scripted.pt') # Save
     print(f"save complete")
 
 if __name__ == "__main__":
@@ -125,5 +125,5 @@ if __name__ == "__main__":
         'test': ['data/MNIST_trainable/test_x.npy', 
         'data/MNIST_trainable/test_y.npy']
     }
-    ignore_label = [1, 5, 7]
+    ignore_label = []
     modeling_main(data_dict, ignore_label)

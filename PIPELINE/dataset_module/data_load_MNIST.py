@@ -20,9 +20,9 @@ class c_dataset:
     def load_dataset(self):
         # x, y
         self.origin_data['train_x'] = np.load(self.data_path+'/train_images.npy')
-        self.origin_data['train_y'] = np.load(self.data_path+'/train_labels.npy')
+        self.origin_data['train_y'] = np.load(self.data_path+'/train_labels.npy').reshape(-1)
         self.origin_data['test_x'] = np.load(self.data_path+'/test_images.npy')
-        self.origin_data['test_y'] = np.load(self.data_path+'/test_labels.npy')
+        self.origin_data['test_y'] = np.load(self.data_path+'/test_labels.npy').reshape(-1)
         print("Data Loading Complete.")
     
     def save_data(self, path=None):
@@ -61,7 +61,7 @@ class c_dataset:
         return self.data
 
 if __name__ == "__main__":
-    dset = c_dataset()
+    dset = c_dataset(ignore_label=[1,2])
     dset.load_dataset()
     dset.split_data()
     dset.save_data()
