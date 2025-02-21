@@ -64,7 +64,7 @@ class CNN(nn.Module):
         x = self.fc2(x)
         return x
 
-def modeling_main(path_dict:dict, ignore_label:list=[], save_path:str="/home/madfalcon/madfalcon_lab/model/"):
+def modeling_main(path_dict:dict, ignore_label:list=[], save_path:str="/data"):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_param = {
         "device":device,
@@ -88,6 +88,7 @@ def modeling_main(path_dict:dict, ignore_label:list=[], save_path:str="/home/mad
 
 
     # MLflow 설정
+    mlflow.set_tracking_uri(uri="http://172.17.0.1:5000")
     experiment_name = "MLOPS Classification"
     mlflow.set_experiment(experiment_name)
     with mlflow.start_run():
@@ -135,12 +136,12 @@ def modeling_main(path_dict:dict, ignore_label:list=[], save_path:str="/home/mad
 
 if __name__ == "__main__":
     data_dict = {
-        'train': ['data/MNIST_trainable/train_x.npy', 
-        'data/MNIST_trainable/train_y.npy'], 
-        'valid': ['data/MNIST_trainable/valid_x.npy', 
-        'data/MNIST_trainable/valid_y.npy'], 
-        'test': ['data/MNIST_trainable/test_x.npy', 
-        'data/MNIST_trainable/test_y.npy']
+        'train': ['/data/MNIST_trainable/train_x.npy', 
+        '/data/MNIST_trainable/train_y.npy'], 
+        'valid': ['/data/MNIST_trainable/valid_x.npy', 
+        '/data/MNIST_trainable/valid_y.npy'], 
+        'test': ['/data/MNIST_trainable/test_x.npy', 
+        '/data/MNIST_trainable/test_y.npy']
     }
     ignore_label = []
     modeling_main(data_dict, ignore_label)
